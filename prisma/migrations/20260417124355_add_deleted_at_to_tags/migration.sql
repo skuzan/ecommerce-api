@@ -1,0 +1,5 @@
+-- CreateEnum
+CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED');
+
+-- AlterTable
+ALTER TABLE "tags" ADD COLUMN     "deletedAt" TIMESTAMP(3);
