@@ -8,6 +8,8 @@ export interface CrudController {
   create: RequestHandler;
   update: RequestHandler;
   remove: RequestHandler;
+  restore: RequestHandler;
+  getDeleted:RequestHandler;
 }
 
 // ---- Product Controller (Tag işlemleri ek) ----
@@ -16,4 +18,5 @@ export interface ProductController extends CrudController {
   addTags: RequestHandler;
   removeTags: RequestHandler;
   setTags: RequestHandler;
+  getDeleted:RequestHandler;
 }

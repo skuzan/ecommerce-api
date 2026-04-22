@@ -1,6 +1,6 @@
 import { prisma } from "../config/database.js";
 import type { CreateProducerInput, UpdateProducerInput } from "../schemas/producerSchemas.js";
-import { NotFoundError } from "../utils/errors.js";
+import { ConflictError, NotFoundError } from "../utils/errors.js";
 
 export const producerService = {
   findAll: async () => {
@@ -44,4 +44,33 @@ export const producerService = {
       data: { deletedAt: new Date() },
     });
   },
+
+  restore: async (id: string) => { 
+    const producer = await prisma.producer.findUnique({
+      where: { id },
+    });
+  
+    if (!producer) {
+      throw new NotFoundError("Üretici");
+    }
+  
+    if (!producer.deletedAt) {
+      throw new ConflictError("Üretici zaten aktif");
+    }
+
+    return prisma.producer.update({
+      where: { id },
+      data: {
+        deletedAt: null,
+      }})
+  },
+
+  findDeleted: async () => {
+    return prisma.producer.findMany({
+      where: { deletedAt: { not: null } },
+      include: { products: { where: { deletedAt: null } } },
+      orderBy: { deletedAt: "desc" },
+    });
+  }
+
 };

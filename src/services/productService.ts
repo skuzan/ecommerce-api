@@ -1,4 +1,4 @@
-import { NotFoundError } from "../utils/errors.js";
+import { ConflictError, NotFoundError } from "../utils/errors.js";
 import { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../config/database.js";
 import type { CreateProductInput, ProductQuery, UpdateProductInput } from "../schemas/productSchemas.js";
@@ -150,6 +150,41 @@ export const productService = {
     await prisma.product.update({
       where: { id },
       data: { deletedAt: new Date(), isActive: false },
+    });
+  },
+
+    restore: async (id: string) => {
+    const product = await prisma.product.findUnique({
+      where: { id },
+    });
+
+    if (!product) {
+      throw new NotFoundError("Ürün");
+    }
+
+    if (!product.deletedAt) {
+      throw new ConflictError("Ürün zaten aktif");
+    }
+
+    return prisma.product.update({
+      where: { id },
+      data: {
+        deletedAt: null,
+        isActive: true,
+      },
+      include: {
+        category: true,
+        producer: true,
+        tags: { where: { deletedAt: null } },
+      },
+    });
+  },
+
+    findDeleted: async () => {
+    return prisma.product.findMany({
+      where: { deletedAt: { not: null } },
+      include: { category: true, producer: true },
+      orderBy: { deletedAt: "desc" },
     });
   },
 };

@@ -3,7 +3,7 @@ import { productService } from "../services/productService.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { type ProductController } from "../types/controllerTypes.js";
 import type { ProductQuery } from "../schemas/productSchemas.js";
-import { sendNoContent, sendSuccess } from "../utils/response.js";
+import { sendList, sendNoContent, sendSuccess } from "../utils/response.js";
 
 const getAll = asyncHandler(async (req: Request, res: Response) => {
   const filters = (res.locals.validatedQuery ?? req.query) as ProductQuery;
@@ -63,13 +63,27 @@ const setTags = asyncHandler(
   },
 );
 
+const restore = asyncHandler(
+  async (req: Request<{ id: string }>, res: Response) => {
+    const product = await productService.restore(req.params.id);
+    sendSuccess(res, product);
+  },
+);
+
+const getDeleted = asyncHandler(async (_req: Request, res: Response) => {
+  const items = await productService.findDeleted();
+  sendList(res, items);
+});
+
 export const productController: ProductController = {
   getAll,
   getById,
   create,
   update,
   remove,
+  restore,
   addTags,
   removeTags,
   setTags,
+  getDeleted,
 };

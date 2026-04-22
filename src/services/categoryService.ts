@@ -1,6 +1,9 @@
-import { NotFoundError } from "../utils/errors.js";
+import { ConflictError, NotFoundError } from "../utils/errors.js";
 import { prisma } from "../config/database.js";
-import type { CreateCategoryInput, UpdateCategoryInput } from "../schemas/categorySchemas.js";
+import type {
+  CreateCategoryInput,
+  UpdateCategoryInput,
+} from "../schemas/categorySchemas.js";
 
 const toSlug = (name: string): string =>
   name
@@ -54,13 +57,35 @@ export const categoryService = {
   },
 
   remove: async (id: string) => {
-    const category = await prisma.category.findUnique({ where: { id, deletedAt: null } });
+    const category = await prisma.category.findUnique({
+      where: { id, deletedAt: null },
+    });
     if (!category) throw new NotFoundError("Kategori");
     await prisma.category.update({
       where: { id },
       data: {
         deletedAt: new Date(),
       },
+    });
+  },
+
+  restore: async (id: string) => {
+    const category = await prisma.category.findUnique({ where: { id } });
+    if (!category) throw new NotFoundError("Kategori");
+    if (!category.deletedAt) throw new ConflictError("Bu kategori zaten aktif");
+
+    return prisma.category.update({
+      where: { id },
+      data: { deletedAt: null },
+      include: { products: { where: { deletedAt: null } } },
+    });
+  },
+
+  findDeleted: async () => {
+    return prisma.category.findMany({
+      where: { deletedAt: { not: null } },
+      include: { products: { where: { deletedAt: null } } },
+      orderBy: { deletedAt: "desc" },
     });
   },
 };

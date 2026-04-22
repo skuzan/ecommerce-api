@@ -1,4 +1,4 @@
-import { NotFoundError } from "../utils/errors.js";
+import { ConflictError, NotFoundError } from "../utils/errors.js";
 import { prisma } from "../config/database.js";
 import type { CreateTagInput, UpdateTagInput } from "../schemas/tagSchemas.js";
 
@@ -45,4 +45,24 @@ export const tagService = {
       data: { deletedAt: new Date() },
     });
   },
+
+    restore: async (id: string) => {
+    const tag = await prisma.tag.findUnique({ where: { id } });
+    if (!tag) throw new NotFoundError("Etiket");
+    if (!tag.deletedAt) throw new ConflictError("Bu etiket zaten aktif");
+
+    return prisma.tag.update({
+      where: { id },
+      data: { deletedAt: null },
+      include: { products: { where: { deletedAt: null } } },
+    });
+  },
+
+  findDeleted: async () => {
+    return prisma.tag.findMany({
+      where: { deletedAt: { not: null } },
+      include: { products: { where: { deletedAt: null } } },
+      orderBy: { deletedAt: "desc" },
+  })
+}
 };

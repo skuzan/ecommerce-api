@@ -3,7 +3,7 @@ import { tagService } from "../services/tagService.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { type CrudController } from "../types/controllerTypes.js";
 import type { CreateTagInput, UpdateTagInput } from "../schemas/tagSchemas.js";
-import { sendNoContent, sendSuccess } from "../utils/response.js";
+import { sendList, sendNoContent, sendSuccess } from "../utils/response.js";
 
 const getAll = asyncHandler(async (_req: Request, res: Response) => {
   const tags = await tagService.findAll();
@@ -33,10 +33,23 @@ const remove = asyncHandler(async (req: Request<{ id: string }>, res: Response) 
   sendNoContent(res);
 });
 
+const restore = asyncHandler(async (req: Request<{ id: string }>, res: Response) => {
+  const item = await tagService.restore(req.params.id);
+  sendSuccess(res, item);
+});
+
+const getDeleted = asyncHandler(async (_req: Request, res: Response) => {
+  const items = await tagService.findDeleted();
+  sendList(res, items);
+});
+
+
 export const tagController: CrudController = {
   getAll,
   getById,
   create,
   update,
   remove,
+  restore,
+  getDeleted
 };

@@ -2,7 +2,7 @@ import { type Request, type Response } from "express";
 import { categoryService } from "../services/categoryService.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { type CrudController } from "../types/controllerTypes.js";
-import { sendNoContent, sendSuccess } from "../utils/response.js";
+import { sendList, sendNoContent, sendSuccess } from "../utils/response.js";
 
 const getAll = asyncHandler(async (_req: Request, res: Response) => {
   const categories = await categoryService.findAll();
@@ -36,10 +36,22 @@ const remove = asyncHandler(
   },
 );
 
+const restore = asyncHandler(async (req: Request<{ id: string }>, res: Response) => {
+  const item = await categoryService.restore(req.params.id);
+  sendSuccess(res, item);
+});
+
+const getDeleted = asyncHandler(async (_req: Request, res: Response) => {
+  const items = await categoryService.findDeleted();
+  sendList(res, items);
+});
+
 export const categoryController: CrudController = {
   getAll,
   getById,
   create,
   update,
   remove,
+  restore,
+  getDeleted,
 };

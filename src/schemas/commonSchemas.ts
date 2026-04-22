@@ -36,3 +36,4 @@ export const slugSchema = z
 
 export type IdParam = z.infer<typeof idParamSchema>;
 export type PaginationInput = z.infer<typeof paginationSchema>;
+
