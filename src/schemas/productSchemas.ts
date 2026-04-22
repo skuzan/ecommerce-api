@@ -28,6 +28,8 @@ export const productQuerySchema = paginationSchema
     producerId: z.string().uuid("Geçersiz üretici ID").optional(),
     minPrice: z.coerce.number().int().nonnegative().optional(),
     maxPrice: z.coerce.number().int().nonnegative().optional(),
+    sort:z.enum(["name","price","stock","createdAt","updateAt"]).default("createdAt"),
+    order:z.enum(["asc", "desc"]).default("desc")
   })
   .refine(
     (data) => {

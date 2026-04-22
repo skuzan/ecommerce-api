@@ -40,9 +40,7 @@ export const productService = {
         producer: true,
         tags: { where: { deletedAt: null } },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: {[filters.sort]: filters.order},
       take: filters.limit,
       skip: (filters.page - 1) * filters.limit,
     });
