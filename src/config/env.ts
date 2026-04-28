@@ -7,6 +7,10 @@ const envSchema = z.object({
     .enum(["development", "production", "test"])
     .default("development"),
   DATABASE_URL: z.string().url().startsWith("postgresql://"),
+  JWT_ACCESS_SECRET: z.string().min(128, "JWT_ACCESS_SECRET en az 128 karakter olmalı"),
+  JWT_REFRESH_SECRET: z.string().min(128, "JWT_REFRESH_SECRET en az 128 karakter olmalı"),
+  JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
+  JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
 });
 
 const sonuc = envSchema.safeParse(process.env);

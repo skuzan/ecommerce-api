@@ -1,10 +1,52 @@
 import { prisma } from "../config/database.js";
 import type { LoginInput, RegisterInput } from "../schemas/authSchemas.js";
+import type { Role } from "../generated/prisma/client.js";
 import { ConflictError, UnauthorizedError } from "../utils/errors.js";
-import { comparePassword, DUMMY_HASH, hashPassword } from "../utils/password.js";
+import type { SessionContext } from "../types/authTypes.js";
+import { hashToken, signAccessToken, signRefreshToken } from "../utils/jwt.js";
+import {
+  comparePassword,
+  DUMMY_HASH,
+  hashPassword,
+} from "../utils/password.js";
 import crypto from "node:crypto";
 
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; //24 saat
+const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; //7 gün
+
+const issueTokens = async (
+  user: { id: string; role: Role },
+  session: SessionContext,
+) => {
+  const create = await prisma.refreshToken.create({
+    data: {
+      token: crypto.randomBytes(16).toString("hex"),
+      userId: user.id,
+      expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
+      userAgent: session.userAgent ?? null,
+      ipAddress: session.ipAddress ?? null,
+    },
+  });
+
+  const accessToken = signAccessToken({ userId: user.id, role: user.role });
+  const refreshTokenJWT = signRefreshToken({
+    userId: user.id,
+    tokenId: create.id,
+  });
+
+  await prisma.refreshToken.update({
+    where: {
+      id: create.id,
+    },
+    data: {
+      token: hashToken(refreshTokenJWT),
+    },
+  });
+  return {
+    accessToken,
+    refreshToken: refreshTokenJWT,
+  };
+};
 
 export const authService = {
   register: async (input: RegisterInput) => {
@@ -50,7 +92,6 @@ export const authService = {
     console.log(`📧 URL: ${verificationUrl}`);
     console.log(`📧 Token: ${rawToken}`);
 
-
     return user;
   },
 
@@ -82,7 +123,7 @@ export const authService = {
     return { verified: true };
   },
 
-  login: async (input: LoginInput) => {
+  login: async (input: LoginInput, session: SessionContext) => {
     const user = await prisma.user.findUnique({
       where: { email: input.email },
     });
@@ -108,11 +149,16 @@ export const authService = {
       );
     }
 
+    const tokens = await issueTokens({ id: user.id, role: user.role }, session);
+
     return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
+      ...tokens,
     };
   },
 };

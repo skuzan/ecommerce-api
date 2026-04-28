@@ -24,11 +24,11 @@ const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const login = asyncHandler(async (req: Request, res: Response) => {
-  const user = await authService.login(req.body);
-  sendSuccess(res, {
-    user,
-    message: "Giriş başarılı",
-  });
+  const result = await authService.login(req.body, {
+    userAgent: req.get("user-agent") ?? undefined,
+    ipAddress: req.ip
+  } );
+  sendSuccess(res, result);
 });
 
 export const authController: {
