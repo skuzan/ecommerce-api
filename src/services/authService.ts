@@ -1,9 +1,10 @@
 import { prisma } from "../config/database.js";
+import jwt from "jsonwebtoken";
 import type { LoginInput, RegisterInput } from "../schemas/authSchemas.js";
 import type { Role } from "../generated/prisma/client.js";
 import { ConflictError, UnauthorizedError } from "../utils/errors.js";
-import type { SessionContext } from "../types/authTypes.js";
-import { hashToken, signAccessToken, signRefreshToken } from "../utils/jwt.js";
+import type { RefreshTokenPayload, SessionContext } from "../types/authTypes.js";
+import { hashToken, signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
 import {
   comparePassword,
   DUMMY_HASH,
@@ -161,4 +162,58 @@ export const authService = {
       ...tokens,
     };
   },
+  refresh: async (rawToken: string, session: SessionContext) => {
+    let payload: RefreshTokenPayload
+    try {
+      payload = verifyRefreshToken(rawToken)
+    } catch (error) {
+      if (error instanceof jwt.TokenExpiredError) {
+        throw new UnauthorizedError("Oturum süresi dolmuş. Lütfen tekrar giriş yapın")
+      }
+      throw new UnauthorizedError("Geçersiz refresh token")
+    }
+
+    const stored = await prisma.refreshToken.findUnique({
+      where: { id: payload.tokenId },
+    })
+
+    if (!stored) throw new UnauthorizedError("Geçersiz refresh token")
+
+    if (stored.token !== hashToken(rawToken)) {
+      throw new UnauthorizedError("Geçersiz refresh token")
+    }
+
+    if (stored.expiresAt < new Date()) {
+      throw new UnauthorizedError("Refresh token süresi dolmuş")
+    }
+
+    if (stored.revokedAt) {
+      await prisma.refreshToken.updateMany({
+        where: { userId: payload.userId, revokedAt: null },
+        data: { revokedAt: new Date() }
+      })
+
+      throw new UnauthorizedError("Oturum güvenliği ihlali. Tüm oturumlarınız sonlandırıldı")
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+    })
+
+    if (!user  || user.deletedAt || !user.isActive) {
+      throw new UnauthorizedError("Hesap geçersiz veya silinmiş")
+    }
+
+    const tokens = await issueTokens({id:user.id, role: user.role}, session)
+
+    const newPayload = verifyRefreshToken( tokens.refreshToken)
+
+    await prisma.refreshToken.update({
+      where : {id: stored.id},
+      data: {revokedAt: new Date(), replacedBy:newPayload.tokenId}
+    })
+
+    return tokens
+
+  }
 };

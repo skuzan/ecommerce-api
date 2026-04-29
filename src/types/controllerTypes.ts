@@ -20,3 +20,10 @@ export interface ProductController extends CrudController {
   setTags: RequestHandler;
   getDeleted:RequestHandler;
 }
+
+export interface AuthController {
+  register: RequestHandler;
+  verifyEmail: RequestHandler;
+  login: RequestHandler,
+  refresh: RequestHandler
+}

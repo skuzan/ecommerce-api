@@ -15,4 +15,6 @@ router.post(
 
 router.post("/login", validateBody(loginSchema), authController.login)
 
+router.post("/refresh", authController.refresh)
+
 export default router;
