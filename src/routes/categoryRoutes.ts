@@ -6,32 +6,33 @@ import {
   createCategorySchema,
   updateCategorySchema,
 } from "../schemas/categorySchemas.js";
+import { authenticate } from "../middlewares/authenticate.js";
 
 const router: ExpressRouter = Router();
 
 //! 1. Statik Route
 router.get("/", categoryController.getAll);
-router.get("/deleted", categoryController.getDeleted);
+router.get("/deleted",authenticate, categoryController.getDeleted);
 
 //! 2. Veri Girişi Route
 
-router.post("/", validateBody(createCategorySchema), categoryController.create);
+router.post("/", authenticate,validateBody(createCategorySchema), categoryController.create);
 
 //! 3. Dinamik Route
 router.get("/:id", validateParams(idParamSchema), categoryController.getById);
 router.put(
-  "/:id",
+  "/:id",authenticate,
   validateParams(idParamSchema),
   validateBody(updateCategorySchema),
   categoryController.update,
 );
 router.delete(
-  "/:id",
+  "/:id",authenticate,
   validateParams(idParamSchema),
   categoryController.remove,
 );
 router.patch(
-  "/:id/restore",
+  "/:id/restore",authenticate,
   validateParams(idParamSchema),
   categoryController.restore,
 );

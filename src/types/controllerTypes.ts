@@ -25,5 +25,9 @@ export interface AuthController {
   register: RequestHandler;
   verifyEmail: RequestHandler;
   login: RequestHandler,
-  refresh: RequestHandler
+  refresh: RequestHandler,
+    logout:RequestHandler,
+  logoutAll:RequestHandler,
+  me:RequestHandler,
+  session:RequestHandler,
 }

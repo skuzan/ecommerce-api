@@ -12,30 +12,31 @@ import {
   updateProductSchema,
 } from "../schemas/productSchemas.js";
 import { idParamSchema } from "../schemas/commonSchemas.js";
+import { authenticate } from "../middlewares/authenticate.js";
 
 const router: ExpressRouter = Router();
 
 //! 1. Statik Route
 
 router.get("/", validateQuery(productQuerySchema), productController.getAll);
-router.get("/deleted", productController.getDeleted);
+router.get("/deleted", authenticate, productController.getDeleted);
 
 //! 2. Veri Girişi Route
 
-router.post("/", validateBody(createProductSchema), productController.create);
+router.post("/", authenticate, validateBody(createProductSchema), productController.create);
 
 //! 3. Dinamik Route
 router.get("/:id", validateParams(idParamSchema), productController.getById);
 
 router.put(
-  "/:id",
+  "/:id",authenticate,
   validateParams(idParamSchema),
   validateBody(updateProductSchema),
   productController.update,
 );
-router.delete("/:id", validateParams(idParamSchema), productController.remove);
+router.delete("/:id", authenticate,  validateParams(idParamSchema), productController.remove);
 router.patch(
-  "/:id/restore",
+  "/:id/restore", authenticate, 
   validateParams(idParamSchema),
   productController.restore,
 );
@@ -43,21 +44,21 @@ router.patch(
 //! 4. Alt Route
 
 router.post(
-  "/:id/tags",
+  "/:id/tags", authenticate,
   validateParams(idParamSchema),
   validateBody(tagIdsSchema),
   productController.addTags,
 );
 
 router.delete(
-  "/:id/tags",
+  "/:id/tags",authenticate,
   validateParams(idParamSchema),
   validateBody(tagIdsSchema),
   productController.removeTags,
 );
 
 router.put(
-  "/:id/tags",
+  "/:id/tags", authenticate,
   validateParams(idParamSchema),
   validateBody(tagIdsSchema),
   productController.setTags,

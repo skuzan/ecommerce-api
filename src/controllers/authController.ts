@@ -4,7 +4,7 @@ import { authService } from "../services/authService.js";
 import { sendSuccess } from "../utils/response.js";
 import type { VerifyEmailInput } from "../schemas/authSchemas.js";
 import type { AuthController } from "../types/controllerTypes.js";
-import { COOKIE_NAME, setRefreshCookie } from "../utils/cookies.js";
+import { clearRefreshCookie, COOKIE_NAME, setRefreshCookie } from "../utils/cookies.js";
 import { UnauthorizedError } from "../utils/errors.js";
 
 const register = asyncHandler(async (req: Request, res: Response) => {
@@ -49,9 +49,36 @@ const refresh = asyncHandler(async (req: Request, res: Response) => {
   sendSuccess(res, { accessToken })
 })
 
+const logout = asyncHandler(async (req: Request, res: Response) => {
+  const rawToken = req.cookies?.[COOKIE_NAME] as string | undefined
+  await authService.logout(rawToken)
+  clearRefreshCookie(res)
+  sendSuccess(res, { message: "Çıkış Başarılı!" })
+})
+
+const logoutAll = asyncHandler(async (req: Request, res: Response) => {
+  await authService.logoutAll(req.user!.userId)
+  clearRefreshCookie(res)
+  sendSuccess(res, { message: "Tüm Cihazlardan Çıkış Başarılı!" })
+})
+
+const me = asyncHandler(async (req: Request, res: Response) => {
+  const user = await authService.me(req.user!.userId)
+  sendSuccess(res, { user })
+})
+
+const session = asyncHandler(async (req: Request, res: Response) => {
+  const list = await authService.listSession(req.user!.userId)
+  sendSuccess(res, { session: list })
+})
+
 export const authController: AuthController = {
   register,
   verifyEmail,
   login,
   refresh,
+  logout,
+  logoutAll,
+  me,
+  session
 };

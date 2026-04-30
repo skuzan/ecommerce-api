@@ -30,3 +30,11 @@ export const verifyRefreshToken = (token: string) => {
     return jwt.verify(token, env.JWT_REFRESH_EXPIRES_IN) as RefreshTokenPayload
 }
 
+export const safeVerifyRefreshToken = (token: string): RefreshTokenPayload | null => {
+    try {
+        return jwt.verify(token, env.JWT_REFRESH_SECRET) as RefreshTokenPayload
+    } catch (error) {
+        return null
+    }
+}
+

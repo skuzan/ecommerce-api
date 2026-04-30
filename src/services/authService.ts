@@ -4,7 +4,7 @@ import type { LoginInput, RegisterInput } from "../schemas/authSchemas.js";
 import type { Role } from "../generated/prisma/client.js";
 import { ConflictError, UnauthorizedError } from "../utils/errors.js";
 import type { RefreshTokenPayload, SessionContext } from "../types/authTypes.js";
-import { hashToken, signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
+import { hashToken, safeVerifyRefreshToken, signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
 import {
   comparePassword,
   DUMMY_HASH,
@@ -215,5 +215,63 @@ export const authService = {
 
     return tokens
 
+  },
+
+  logout: async (rawRefreshToken?: string) => {
+    if (!rawRefreshToken) return;
+    const payload = safeVerifyRefreshToken(rawRefreshToken)
+    if (!payload) return;
+
+    await prisma.refreshToken.updateMany({
+      where: { id: payload.tokenId, revokedAt: null },
+      data: {
+        revokedAt: new Date()
+      }
+    })
+  },
+
+  logoutAll: async (userId: string) => {
+    await prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: {
+        revokedAt: new Date()
+      }
+    })
+  },
+
+  me: async (userId: string) => {
+    const user = await prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        isVerified: true,
+        createdAt: true,
+      }
+    })
+
+    if (!user) throw new UnauthorizedError("Hesap Bulunamadı")
+    return user
+  },
+
+  listSession: async (userId: string) => {
+    return prisma.refreshToken.findMany({
+      where: {
+        userId,
+        revokedAt: null,
+        expiresAt: { gt: new Date() }
+      },
+      select: {
+        id: true,
+        userAgent: true,
+        ipAddress: true,
+        createdAt: true,
+        expiresAt: true
+      },
+      orderBy: { createdAt: "desc" }
+    })
   }
 };

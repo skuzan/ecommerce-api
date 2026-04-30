@@ -2,7 +2,7 @@ import z from "zod";
 import { nameSchema, paginationSchema } from "./commonSchemas.js";
 
 export const createProductSchema = z.object({
-  name: nameSchema,
+  name: nameSchema(100),
   description: z.string().trim().max(1000).optional(),
   price: z
     .number({ error: "Fiyat sayı olmalıdır" })
