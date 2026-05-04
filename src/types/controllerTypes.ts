@@ -9,7 +9,7 @@ export interface CrudController {
   update: RequestHandler;
   remove: RequestHandler;
   restore: RequestHandler;
-  getDeleted:RequestHandler;
+  getDeleted: RequestHandler;
 }
 
 // ---- Product Controller (Tag işlemleri ek) ----
@@ -18,16 +18,19 @@ export interface ProductController extends CrudController {
   addTags: RequestHandler;
   removeTags: RequestHandler;
   setTags: RequestHandler;
-  getDeleted:RequestHandler;
+  getDeleted: RequestHandler;
 }
 
 export interface AuthController {
   register: RequestHandler;
   verifyEmail: RequestHandler;
-  login: RequestHandler,
-  refresh: RequestHandler,
-    logout:RequestHandler,
-  logoutAll:RequestHandler,
-  me:RequestHandler,
-  session:RequestHandler,
+  login: RequestHandler;
+  refresh: RequestHandler;
+  logout: RequestHandler;
+  logoutAll: RequestHandler;
+  me: RequestHandler;
+  session: RequestHandler;
+  forgotPassword: RequestHandler;
+  resetPassword: RequestHandler;
+  resendVerification: RequestHandler;
 }

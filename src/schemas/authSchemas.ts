@@ -43,3 +43,35 @@ export const loginSchema = z.object({
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Geçerli Email Adresi Girin")
+}
+)
+
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>
+
+export const resetPasswordSchme = z.object({
+  token: z.string().length(64, "Geçersiz Token"),
+  password: z
+    .string({ error: "Şifre metin olmalıdır" })
+    .min(8, "Şifre en az 8 karakter olmalıdır")
+    .max(100, "Şifre en fazla 100 karakter olabilir")
+    .regex(/[A-Z]/, "En az bir büyük harf içermelidir")
+    .regex(/[a-z]/, "En az bir küçük harf içermelidir")
+    .regex(/[0-9]/, "En az bir rakam içermelidir"),
+
+  confirmPassword: z.string(),
+})
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Şifreler eşleşmiyor",
+    path: ["confirmPassword"],
+  });
+
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchme>
+
+export const resendVerificationSchema = z.object({
+  email: z.string().trim().toLowerCase().email(),
+});
+
+export type ResendVerificationInput = z.infer<typeof resendVerificationSchema>

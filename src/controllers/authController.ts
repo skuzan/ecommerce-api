@@ -1,10 +1,17 @@
-import type { Response, Request} from "express";
+import type { Response, Request } from "express";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { authService } from "../services/authService.js";
 import { sendSuccess } from "../utils/response.js";
-import type { VerifyEmailInput } from "../schemas/authSchemas.js";
+import type {
+  ResendVerificationInput,
+  VerifyEmailInput,
+} from "../schemas/authSchemas.js";
 import type { AuthController } from "../types/controllerTypes.js";
-import { clearRefreshCookie, COOKIE_NAME, setRefreshCookie } from "../utils/cookies.js";
+import {
+  clearRefreshCookie,
+  COOKIE_NAME,
+  setRefreshCookie,
+} from "../utils/cookies.js";
 import { UnauthorizedError } from "../utils/errors.js";
 
 const register = asyncHandler(async (req: Request, res: Response) => {
@@ -27,50 +34,67 @@ const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const login = asyncHandler(async (req: Request, res: Response) => {
-  const { accessToken, refreshToken, user } = await authService.login(req.body, {
-    userAgent: req.get("user-agent") ?? undefined,
-    ipAddress: req.ip
-  });
-  setRefreshCookie(res, refreshToken)
+  const { accessToken, refreshToken, user } = await authService.login(
+    req.body,
+    {
+      userAgent: req.get("user-agent") ?? undefined,
+      ipAddress: req.ip,
+    },
+  );
+  setRefreshCookie(res, refreshToken);
   sendSuccess(res, { user, accessToken });
 });
 
 const refresh = asyncHandler(async (req: Request, res: Response) => {
- const rawToken = req.cookies?.[COOKIE_NAME] as string | undefined
+  const rawToken = req.cookies?.[COOKIE_NAME] as string | undefined;
   if (!rawToken) {
-    throw new UnauthorizedError("Refresh Token bulunamadı")
+    throw new UnauthorizedError("Refresh Token bulunamadı");
   }
 
   const { accessToken, refreshToken } = await authService.refresh(rawToken, {
     userAgent: req.get("user-agent") ?? undefined,
-    ipAddress: req.ip
-  })
-  setRefreshCookie(res, refreshToken)
-  sendSuccess(res, { accessToken })
-})
+    ipAddress: req.ip,
+  });
+  setRefreshCookie(res, refreshToken);
+  sendSuccess(res, { accessToken });
+});
 
 const logout = asyncHandler(async (req: Request, res: Response) => {
-  const rawToken = req.cookies?.[COOKIE_NAME] as string | undefined
-  await authService.logout(rawToken)
-  clearRefreshCookie(res)
-  sendSuccess(res, { message: "Çıkış Başarılı!" })
-})
+  const rawToken = req.cookies?.[COOKIE_NAME] as string | undefined;
+  await authService.logout(rawToken);
+  clearRefreshCookie(res);
+  sendSuccess(res, { message: "Çıkış Başarılı!" });
+});
 
 const logoutAll = asyncHandler(async (req: Request, res: Response) => {
-  await authService.logoutAll(req.user!.userId)
-  clearRefreshCookie(res)
-  sendSuccess(res, { message: "Tüm Cihazlardan Çıkış Başarılı!" })
-})
+  await authService.logoutAll(req.user!.userId);
+  clearRefreshCookie(res);
+  sendSuccess(res, { message: "Tüm Cihazlardan Çıkış Başarılı!" });
+});
 
 const me = asyncHandler(async (req: Request, res: Response) => {
-  const user = await authService.me(req.user!.userId)
-  sendSuccess(res, { user })
-})
+  const user = await authService.me(req.user!.userId);
+  sendSuccess(res, { user });
+});
 
 const session = asyncHandler(async (req: Request, res: Response) => {
-  const list = await authService.listSession(req.user!.userId)
-  sendSuccess(res, { session: list })
-})
+  const list = await authService.listSession(req.user!.userId);
+  sendSuccess(res, { session: list });
+});
+
+const forgotPassword = asyncHandler(async (req: Request, res: Response) => {
+  sendSuccess(res, await authService.forgotPassword(req.body));
+});
+
+const resetPassword = asyncHandler(async (req: Request, res: Response) => {
+  sendSuccess(res, await authService.resetPassword(req.body));
+});
+
+const resendVerification = asyncHandler(async (req: Request, res: Response) => {
+  const { email } = req.body as ResendVerificationInput;
+  const result = await authService.resendVerification(email);
+  sendSuccess(res, result);
+});
 
 export const authController: AuthController = {
   register,
@@ -80,5 +104,8 @@ export const authController: AuthController = {
   logout,
   logoutAll,
   me,
-  session
+  session,
+  forgotPassword,
+  resetPassword,
+  resendVerification,
 };

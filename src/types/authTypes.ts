@@ -16,3 +16,10 @@ export interface SessionContext {
     userAgent?: string | undefined;
     ipAddress?: string | undefined;
 }
+
+export interface MailOptions {
+    to: string;
+    subject:string;
+    html: string;
+    text?: string
+}

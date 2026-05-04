@@ -1,16 +1,35 @@
 import { prisma } from "../config/database.js";
 import jwt from "jsonwebtoken";
-import type { LoginInput, RegisterInput } from "../schemas/authSchemas.js";
+import type {
+  ForgotPasswordInput,
+  LoginInput,
+  RegisterInput,
+  ResetPasswordInput,
+} from "../schemas/authSchemas.js";
 import type { Role } from "../generated/prisma/client.js";
 import { ConflictError, UnauthorizedError } from "../utils/errors.js";
-import type { RefreshTokenPayload, SessionContext } from "../types/authTypes.js";
-import { hashToken, safeVerifyRefreshToken, signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
+import type {
+  RefreshTokenPayload,
+  SessionContext,
+} from "../types/authTypes.js";
+import {
+  hashToken,
+  safeVerifyRefreshToken,
+  signAccessToken,
+  signRefreshToken,
+  verifyRefreshToken,
+} from "../utils/jwt.js";
 import {
   comparePassword,
   DUMMY_HASH,
   hashPassword,
 } from "../utils/password.js";
 import crypto from "node:crypto";
+import {
+  resetPasswordTemplate,
+  verifyEmailTemplate,
+} from "../utils/emailTemplates.js";
+import { safeSendEmail } from "../utils/mailer.js";
 
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; //24 saat
 const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; //7 gün
@@ -87,11 +106,11 @@ export const authService = {
       },
     });
 
-    // email verificationURL 36.gün
-    const verificationUrl = `/verify-email?token=${rawToken}`;
-    console.log(`📧 To: ${user.email}`);
-    console.log(`📧 URL: ${verificationUrl}`);
-    console.log(`📧 Token: ${rawToken}`);
+await safeSendEmail({
+      to: user.email,
+      subject: "Email Adresini Doğrula",
+      html: verifyEmailTemplate(rawToken)
+    })
 
     return user;
   },
@@ -163,80 +182,83 @@ export const authService = {
     };
   },
   refresh: async (rawToken: string, session: SessionContext) => {
-    let payload: RefreshTokenPayload
+    let payload: RefreshTokenPayload;
     try {
-      payload = verifyRefreshToken(rawToken)
+      payload = verifyRefreshToken(rawToken);
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
-        throw new UnauthorizedError("Oturum süresi dolmuş. Lütfen tekrar giriş yapın")
+        throw new UnauthorizedError(
+          "Oturum süresi dolmuş. Lütfen tekrar giriş yapın",
+        );
       }
-      throw new UnauthorizedError("Geçersiz refresh token")
+      throw new UnauthorizedError("Geçersiz refresh token");
     }
 
     const stored = await prisma.refreshToken.findUnique({
       where: { id: payload.tokenId },
-    })
+    });
 
-    if (!stored) throw new UnauthorizedError("Geçersiz refresh token")
+    if (!stored) throw new UnauthorizedError("Geçersiz refresh token");
 
     if (stored.token !== hashToken(rawToken)) {
-      throw new UnauthorizedError("Geçersiz refresh token")
+      throw new UnauthorizedError("Geçersiz refresh token");
     }
 
     if (stored.expiresAt < new Date()) {
-      throw new UnauthorizedError("Refresh token süresi dolmuş")
+      throw new UnauthorizedError("Refresh token süresi dolmuş");
     }
 
     if (stored.revokedAt) {
       await prisma.refreshToken.updateMany({
         where: { userId: payload.userId, revokedAt: null },
-        data: { revokedAt: new Date() }
-      })
+        data: { revokedAt: new Date() },
+      });
 
-      throw new UnauthorizedError("Oturum güvenliği ihlali. Tüm oturumlarınız sonlandırıldı")
+      throw new UnauthorizedError(
+        "Oturum güvenliği ihlali. Tüm oturumlarınız sonlandırıldı",
+      );
     }
 
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-    })
+    });
 
-    if (!user  || user.deletedAt || !user.isActive) {
-      throw new UnauthorizedError("Hesap geçersiz veya silinmiş")
+    if (!user || user.deletedAt || !user.isActive) {
+      throw new UnauthorizedError("Hesap geçersiz veya silinmiş");
     }
 
-    const tokens = await issueTokens({id:user.id, role: user.role}, session)
+    const tokens = await issueTokens({ id: user.id, role: user.role }, session);
 
-    const newPayload = verifyRefreshToken( tokens.refreshToken)
+    const newPayload = verifyRefreshToken(tokens.refreshToken);
 
     await prisma.refreshToken.update({
-      where : {id: stored.id},
-      data: {revokedAt: new Date(), replacedBy:newPayload.tokenId}
-    })
+      where: { id: stored.id },
+      data: { revokedAt: new Date(), replacedBy: newPayload.tokenId },
+    });
 
-    return tokens
-
+    return tokens;
   },
 
   logout: async (rawRefreshToken?: string) => {
     if (!rawRefreshToken) return;
-    const payload = safeVerifyRefreshToken(rawRefreshToken)
+    const payload = safeVerifyRefreshToken(rawRefreshToken);
     if (!payload) return;
 
     await prisma.refreshToken.updateMany({
       where: { id: payload.tokenId, revokedAt: null },
       data: {
-        revokedAt: new Date()
-      }
-    })
+        revokedAt: new Date(),
+      },
+    });
   },
 
   logoutAll: async (userId: string) => {
     await prisma.refreshToken.updateMany({
       where: { userId, revokedAt: null },
       data: {
-        revokedAt: new Date()
-      }
-    })
+        revokedAt: new Date(),
+      },
+    });
   },
 
   me: async (userId: string) => {
@@ -250,11 +272,11 @@ export const authService = {
         isActive: true,
         isVerified: true,
         createdAt: true,
-      }
-    })
+      },
+    });
 
-    if (!user) throw new UnauthorizedError("Hesap Bulunamadı")
-    return user
+    if (!user) throw new UnauthorizedError("Hesap Bulunamadı");
+    return user;
   },
 
   listSession: async (userId: string) => {
@@ -262,16 +284,118 @@ export const authService = {
       where: {
         userId,
         revokedAt: null,
-        expiresAt: { gt: new Date() }
+        expiresAt: { gt: new Date() },
       },
       select: {
         id: true,
         userAgent: true,
         ipAddress: true,
         createdAt: true,
-        expiresAt: true
+        expiresAt: true,
       },
-      orderBy: { createdAt: "desc" }
-    })
-  }
+      orderBy: { createdAt: "desc" },
+    });
+  },
+
+  forgotPassword: async (input: ForgotPasswordInput) => {
+    const user = await prisma.user.findUnique({
+      where: {
+        email: input.email,
+      },
+    });
+
+    if (user && user.isActive && !user.deletedAt) {
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      const hashedToken = crypto
+        .createHash("sha256")
+        .update(rawToken)
+        .digest("hex");
+
+      await prisma.user.update({
+        where: {
+          id: user.id,
+        },
+        data: {
+          resetToken: hashedToken,
+          resetTokenExpiry: new Date(Date.now() + 60 * 60 * 1000),
+        },
+      });
+
+      await safeSendEmail({
+        to: user.email,
+        subject: "Şifre Sıfırlama",
+        html: resetPasswordTemplate(rawToken),
+      });
+    }
+    return { message: " Sıfırlama Maili gönderildi." };
+  },
+
+  resetPassword: async (input: ResetPasswordInput) => {
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(input.token)
+      .digest("hex");
+
+    const user = await prisma.user.findFirst({
+      where: {
+        resetToken: hashedToken,
+        resetTokenExpiry: { gt: new Date() },
+      },
+    });
+
+    if (!user) throw new UnauthorizedError("Geçersiz veya süresi dolmuş token");
+
+    const hashedPassword = await hashPassword(input.password);
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: {
+          id: user.id,
+        },
+        data: {
+          password: hashedPassword,
+          resetToken: null,
+          resetTokenExpiry: null,
+        },
+      }),
+      prisma.refreshToken.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+
+    return {
+      message: "Şifre başarıyla sıfırlandı, Lütfen yeniden giriş yapın",
+    };
+  },
+
+  resendVerification: async (email: string) => {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (user && !user.isVerified && !user.deletedAt) {
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      const hashedToken = crypto
+        .createHash("sha256")
+        .update(rawToken)
+        .digest("hex");
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          verificationToken: hashedToken,
+          verificationTokenExpiry: new Date(
+            Date.now() + VERIFICATION_TOKEN_TTL_MS,
+          ),
+        },
+      });
+
+      await safeSendEmail({
+        to: user.email,
+        subject: "Email Adresini Doğrula (Yeniden)",
+        html: verifyEmailTemplate(rawToken),
+      });
+    }
+    return {
+      message: "Eğer bu email kayıtlı ve doğrulanmamışsa yeni link gönderildi.",
+    };
+  },
 };

@@ -7,17 +7,29 @@ const envSchema = z.object({
     .enum(["development", "production", "test"])
     .default("development"),
   DATABASE_URL: z.string().url().startsWith("postgresql://"),
-  JWT_ACCESS_SECRET: z.string().min(128, "JWT_ACCESS_SECRET en az 128 karakter olmalı"),
-  JWT_REFRESH_SECRET: z.string().min(128, "JWT_REFRESH_SECRET en az 128 karakter olmalı"),
+  JWT_ACCESS_SECRET: z
+    .string()
+    .min(128, "JWT_ACCESS_SECRET en az 128 karakter olmalı"),
+  JWT_REFRESH_SECRET: z
+    .string()
+    .min(128, "JWT_REFRESH_SECRET en az 128 karakter olmalı"),
   JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
   JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
+
+  SMTP_HOST: z.string().default("localhost"),
+  SMTP_PORT: z.coerce.number().int().positive().default(1025),
+  SMTP_USER: z.string().default(""),
+  SMTP_PASS: z.string().default(""),
+  SMTP_FROM: z.string().default("E-Ticaret API <noreply@ecommerce.local>"),
+  // Verify/reset linklerinde kullanılır
+  FRONTEND_URL: z.string().url().default("http://localhost:3000"),
 });
 
 const sonuc = envSchema.safeParse(process.env);
 
 if (!sonuc.success) {
   console.log("Ortam değişkenleri hatalı");
-  console.log(sonuc.error.format())
+  console.log(sonuc.error.format());
   process.exit(1);
 }
 
