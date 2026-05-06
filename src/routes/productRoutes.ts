@@ -14,6 +14,7 @@ import {
 import { idParamSchema } from "../schemas/commonSchemas.js";
 import { authenticate } from "../middlewares/authenticate.js";
 import { authorize } from "../middlewares/authorize.js";
+import { checkOwnership } from "../middlewares/checkOwnerShip.js";
 
 const router: ExpressRouter = Router();
 
@@ -24,18 +25,18 @@ router.get("/deleted", authenticate, authorize("ADMIN"), productController.getDe
 
 //! 2. Veri Girişi Route
 
-router.post("/", authenticate, authorize("ADMIN"), validateBody(createProductSchema), productController.create);
+router.post("/", authenticate, authorize("ADMIN"), checkOwnership("product"), validateBody(createProductSchema), productController.create);
 
 //! 3. Dinamik Route
 router.get("/:id", validateParams(idParamSchema), productController.getById);
 
 router.put(
-  "/:id",authenticate,  authorize("ADMIN", "PRODUCER"),
+  "/:id",authenticate,  authorize("ADMIN", "PRODUCER"), checkOwnership("product"),
   validateParams(idParamSchema),
   validateBody(updateProductSchema),
   productController.update,
 );
-router.delete("/:id", authenticate,  authorize("ADMIN", "PRODUCER"), validateParams(idParamSchema), productController.remove);
+router.delete("/:id", authenticate,  authorize("ADMIN", "PRODUCER"), checkOwnership("product"), validateParams(idParamSchema), productController.remove);
 router.patch(
   "/:id/restore", authorize("ADMIN"), authenticate, 
   validateParams(idParamSchema),
@@ -45,21 +46,21 @@ router.patch(
 //! 4. Alt Route
 
 router.post(
-  "/:id/tags", authenticate,  authorize("ADMIN", "PRODUCER"),
+  "/:id/tags", authenticate,  authorize("ADMIN", "PRODUCER"), checkOwnership("product"),
   validateParams(idParamSchema),
   validateBody(tagIdsSchema),
   productController.addTags,
 );
 
 router.delete(
-  "/:id/tags",authenticate,  authorize("ADMIN", "PRODUCER"),
+  "/:id/tags",authenticate,  authorize("ADMIN", "PRODUCER"), checkOwnership("product"),
   validateParams(idParamSchema),
   validateBody(tagIdsSchema),
   productController.removeTags,
 );
 
 router.put(
-  "/:id/tags", authenticate,  authorize("ADMIN", "PRODUCER"),
+  "/:id/tags", authenticate,  authorize("ADMIN", "PRODUCER"), checkOwnership("product"),
   validateParams(idParamSchema),
   validateBody(tagIdsSchema),
   productController.setTags,

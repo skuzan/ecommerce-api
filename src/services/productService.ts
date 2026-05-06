@@ -69,7 +69,7 @@ export const productService = {
     return product;
   },
 
-  create: async (input: CreateProductInput) => {
+  create: async (input: CreateProductInput & { ownerId: string }) => {
     return prisma.product.create({
       data: {
         name: input.name,
@@ -78,13 +78,19 @@ export const productService = {
         }),
         price: input.price,
         stock: input.stock ?? 0,
+        ownerId: input.ownerId,
         ...(input.categoryId !== undefined && { categoryId: input.categoryId }),
         ...(input.producerId !== undefined && { producerId: input.producerId }),
         ...(input.tagIds && {
           tags: { connect: input.tagIds.map((id) => ({ id })) },
         }),
       },
-      include: { category: true, producer: true, tags: true },
+      include: {
+        category: true,
+        producer: true,
+        tags: true,
+        owner: { select: { id: true, name: true, email: true } },
+      },
     });
   },
 

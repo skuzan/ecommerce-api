@@ -45,6 +45,9 @@ model Product{
   producer Producer? @relation(fields:[producerId], references:[id], onDelete:SetNull)
   producerId String?
 
+  ownerId String?
+  owner User? @relation("ProductOwner", fields:[ownerId], references:[id], onDelete:SetNull)
+
   tags Tag[]
 
   @@map("products")
@@ -109,6 +112,8 @@ model User {
   // password
   resetToken String?
   resetTokenExpiry DateTime?
+
+  ownerProducts Product[] @relation("ProductOwner")
 
   // ilişkiler
   refreshTokens RefreshToken[]
