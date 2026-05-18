@@ -32,6 +32,7 @@ model Product{
   description String?
   price Int //Kuruş cinsinden
   stock Int @default(0) 
+  imageUrl  String?
   isActive Boolean @default(true)
   deletedAt DateTime?
   createdAt DateTime @default(now())
@@ -49,6 +50,8 @@ model Product{
   owner User? @relation("ProductOwner", fields:[ownerId], references:[id], onDelete:SetNull)
 
   tags Tag[]
+
+   images    ProductImage[]
 
   @@map("products")
   // @@unique()
@@ -141,4 +144,17 @@ model RefreshToken {
 
   @@map("refresh_tokens")
 
+}
+
+model ProductImage {
+  id        String   @id @default(uuid())
+  productId String
+  url       String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("product_images")
 }

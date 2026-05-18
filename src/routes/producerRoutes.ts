@@ -9,6 +9,7 @@ import {
 import { authenticate } from "../middlewares/authenticate.js";
 import { authorize } from "../middlewares/authorize.js"
 
+
 const router: ExpressRouter = Router();
 
 //! 1. Statik Route

@@ -2,6 +2,8 @@ import { ConflictError, NotFoundError } from "../utils/errors.js";
 import { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../config/database.js";
 import type { CreateProductInput, ProductQuery, UpdateProductInput } from "../schemas/productSchemas.js";
+import path from "node:path";
+import fs from "node:fs/promises";
 
 export const productService = {
   findAll: async (filters: ProductQuery) => {
@@ -191,4 +193,32 @@ export const productService = {
       orderBy: { deletedAt: "desc" },
     });
   },
+  setImage: async (id: string, imageUrl: string) => {
+
+    const existing = await prisma.product.findUnique({
+      where: { id },
+      select: { imageUrl: true },
+    });
+
+    const updated = await prisma.product.update({
+      where: { id },
+      data: { imageUrl },
+      select: {
+        id: true,
+        name: true,
+        imageUrl: true,
+        updatedAt: true
+      }
+    })
+
+    if (existing?.imageUrl && existing.imageUrl !== imageUrl) {
+      const oldPath = path.resolve(`.${existing.imageUrl}`);
+      await fs.unlink(oldPath).catch(() => {
+        // Dosya zaten yoksa veya silinememişse sessiz geç —
+        // DB tutarlı, disk best-effort
+      });
+    }
+
+    return updated;
+  }
 };

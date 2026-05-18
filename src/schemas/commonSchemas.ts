@@ -34,6 +34,11 @@ export const slugSchema = z
   )
   .optional();
 
+export const idAndImageIdParamSchema = z.object({
+   id: z.string().uuid("Geçersiz ürün ID formatı"),
+   imageId: z.string().uuid("Geçersiz görsel ID formatı"),
+})
+
 export type IdParam = z.infer<typeof idParamSchema>;
 export type PaginationInput = z.infer<typeof paginationSchema>;
 

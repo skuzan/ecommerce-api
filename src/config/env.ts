@@ -23,7 +23,15 @@ const envSchema = z.object({
   SMTP_FROM: z.string().default("E-Ticaret API <noreply@ecommerce.local>"),
   // Verify/reset linklerinde kullanılır
   FRONTEND_URL: z.string().url().default("http://localhost:3000"),
+
+    UPLOAD_MAX_SIZE_MB: z.coerce.number().int().positive().default(5),
+  UPLOAD_ALLOWED_TYPES: z
+    .string()
+    .default("image/jpeg,image/png,image/webp")
+    .transform((s) => s.split(",").map((t) => t.trim())),
 });
+
+
 
 const sonuc = envSchema.safeParse(process.env);
 

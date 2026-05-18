@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { AppError, ValidationError } from "../utils/errors.js";
 import { Prisma } from "../generated/prisma/client.js";
+import multer from "multer";
 
 export const errorHandler = (
   err: Error,
@@ -47,6 +48,20 @@ export const errorHandler = (
       error: {
         message: "Geçersiz JSON formatı",
         code: "INVALID_JSON",
+      },
+    });
+    return;
+  }
+
+  if (err instanceof multer.MulterError) {
+    const isTooLarge = err.code === "LIMIT_FILE_SIZE";
+    res.status(isTooLarge ? 413 : 422).json({
+      success: false,
+      error: {
+        message: isTooLarge
+          ? "Dosya boyutu sınırı aşıldı"
+          : `Dosya yükleme hatası: ${err.message}`,
+        code: err.code,
       },
     });
     return;

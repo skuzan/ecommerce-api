@@ -19,6 +19,9 @@ export interface ProductController extends CrudController {
   removeTags: RequestHandler;
   setTags: RequestHandler;
   getDeleted: RequestHandler;
+  uploadImage:RequestHandler;
+  uploadGallery:RequestHandler;
+  removeImage:RequestHandler;
 }
 
 export interface AuthController {
