@@ -23,6 +23,11 @@ export const updateProductSchema = createProductSchema.partial();
 
 export const productQuerySchema = paginationSchema
   .extend({
+    tagIds: z
+      .string()
+      .optional()
+      .transform((s) => (s ? s.split(",").filter(Boolean) : undefined))
+      .pipe(z.array(z.string().uuid()).optional()),
     search: z.string().min(1).max(100).optional(),
     categoryId: z.string().uuid("Geçersiz kategori ID").optional(),
     producerId: z.string().uuid("Geçersiz üretici ID").optional(),

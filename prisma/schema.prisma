@@ -37,6 +37,7 @@ model Product{
   deletedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  searchVector Unsupported("tsvector")? // SQL
 
   // ilişkiler
 
@@ -54,6 +55,8 @@ model Product{
    images    ProductImage[]
 
   @@map("products")
+
+  @@index([searchVector], type:Gin)
   // @@unique()
   // @@index([name])
   // @@id([id,productId])

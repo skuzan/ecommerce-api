@@ -5,44 +5,83 @@ import type { CreateProductInput, ProductQuery, UpdateProductInput } from "../sc
 import path from "node:path";
 import fs from "node:fs/promises";
 
-export const productService = {
-  findAll: async (filters: ProductQuery) => {
-    const where: Prisma.ProductWhereInput = {
-      isActive: true,
-      deletedAt: null,
+function buildProductWhere(
+  filters: ProductQuery,
+): Prisma.ProductWhereInput {
+  const where: Prisma.ProductWhereInput = {
+    isActive: true,
+    deletedAt: null,
+  }
+
+  if (filters.categoryId) {
+    where.categoryId = filters.categoryId;
+  }
+
+  if (filters.producerId) {
+    where.producerId = filters.producerId;
+  }
+
+  if (filters.tagIds && filters.tagIds.length > 0) {
+    where.tags = { some: { id: { in: filters.tagIds } } }
+  }
+
+  if (filters.search) {
+    where.OR = [
+      {
+        name: { contains: filters.search, mode: "insensitive" }
+      },
+      {
+        description: { contains: filters.search, mode: "insensitive" }
+      }
+    ]
+  }
+
+  const minPrice = filters.minPrice
+  const maxPrice = filters.maxPrice
+
+  if (minPrice !== undefined || maxPrice !== undefined) {
+    where.price = {
+      ...(filters.minPrice !== undefined && { gte: filters.minPrice }),
+      ...(filters.maxPrice !== undefined && { lte: filters.maxPrice }),
     };
+  }
 
-    if (filters.categoryId) {
-      where.categoryId = filters.categoryId;
-    }
+  return where;
 
-    if (filters.producerId) {
-      where.producerId = filters.producerId;
-    }
 
-    if (filters.search) {
-      where.name = {
-        contains: filters.search,
-        mode: "insensitive",
-      };
-    }
+}
 
-    if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
-      where.price = {
-        ...(filters.minPrice !== undefined && { gte: filters.minPrice }),
-        ...(filters.maxPrice !== undefined && { lte: filters.maxPrice }),
-      };
-    }
+export const productService = {
+findAll: async (filters: ProductQuery) => {
+    const where = buildProductWhere(filters)
 
     const total = await prisma.product.count({ where });
     const data = await prisma.product.findMany({
-      where,
-      include: {
-        category: true,
-        producer: true,
-        tags: { where: { deletedAt: null } },
+        where,
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        price: true,
+        stock: true,
+        imageUrl: true,
+        isActive: true,
+        createdAt: true,
+        category: {
+          select: { id: true, name: true },
+        },
+        producer: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        tags: {
+          where: { deletedAt: null },
+          select: { id: true, name: true },
+        },
       },
-      orderBy: {[filters.sort]: filters.order},
+      orderBy: { [filters.sort]: filters.order },
       take: filters.limit,
       skip: (filters.page - 1) * filters.limit,
     });
