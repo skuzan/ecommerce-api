@@ -8,9 +8,26 @@ import { ValidationError } from "../utils/errors.js";
 import { productImageService } from "../services/productImageService.js";
 
 const getAll = asyncHandler(async (req: Request, res: Response) => {
+
   const filters = (res.locals.validatedQuery ?? req.query) as ProductQuery;
-  const result = await productService.findAll(filters);
-  res.json({ success: true, ...result });
+   if (filters.cursor !== undefined) {
+    const { data, meta } = await productService.findAllWithCursor(filters)
+
+    res.json({
+      success: true, data, meta
+    })
+    return;
+  }
+
+
+  const { data, meta } = await productService.findAll(
+    filters
+  );
+  sendList(res, data, {
+    page: meta.page,
+    limit: meta.limit,
+    total: meta.total,
+  });
 });
 
 const getById = asyncHandler(
@@ -111,6 +128,25 @@ const removeImage = asyncHandler(async (req: Request<{ id: string, imageId: stri
 
 })
 
+const search = asyncHandler(async (req: Request, res: Response) => {
+  const q = String(req.query["q"] ?? "").trim()
+  const page = Math.max(1, Number(req.query["page"] ?? 1));
+  const limit = Math.min(100, Math.max(1, Number(req.query["limit"] ?? 20)));
+
+  if (q.length < 2) {
+    throw new ValidationError("Arama sorgusu en az 2 karakter olmalı", {
+      q: ["q parametresi zorunlu, minimum 2 karakter"]
+    })
+  }
+
+  const { data, total } = await productService.search(q, page, limit)
+
+  sendList(res, data, { page, limit, total })
+
+
+
+})
+
 export const productController: ProductController = {
   getAll,
   getById,
@@ -124,5 +160,6 @@ export const productController: ProductController = {
   getDeleted,
   uploadImage,
   uploadGallery,
-  removeImage
+  removeImage,
+  search
 };

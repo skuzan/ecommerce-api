@@ -39,6 +39,11 @@ export const idAndImageIdParamSchema = z.object({
    imageId: z.string().uuid("Geçersiz görsel ID formatı"),
 })
 
+export const cursorPaginationSchema = z.object({
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20)
+})
+
 export type IdParam = z.infer<typeof idParamSchema>;
 export type PaginationInput = z.infer<typeof paginationSchema>;
 

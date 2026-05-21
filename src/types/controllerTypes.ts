@@ -22,6 +22,7 @@ export interface ProductController extends CrudController {
   uploadImage:RequestHandler;
   uploadGallery:RequestHandler;
   removeImage:RequestHandler;
+  search:RequestHandler;
 }
 
 export interface AuthController {

@@ -22,6 +22,8 @@ const router: ExpressRouter = Router();
 //! 1. Statik Route
 
 router.get("/", validateQuery(productQuerySchema), productController.getAll);
+
+router.get("/search", productController.search)
 router.get("/deleted", authenticate, authorize("ADMIN"), productController.getDeleted);
 
 //! 2. Veri Girişi Route

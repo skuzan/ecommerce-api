@@ -34,7 +34,8 @@ export const productQuerySchema = paginationSchema
     minPrice: z.coerce.number().int().nonnegative().optional(),
     maxPrice: z.coerce.number().int().nonnegative().optional(),
     sort:z.enum(["name","price","stock","createdAt","updateAt"]).default("createdAt"),
-    order:z.enum(["asc", "desc"]).default("desc")
+    order:z.enum(["asc", "desc"]).default("desc"),
+    cursor:z.string().optional()
   })
   .refine(
     (data) => {
