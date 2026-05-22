@@ -25,7 +25,7 @@ export const wishlistService = {
 
   add: async (userId: string, productId: string) => {
     // Ürün gerçekten var mı? (silinmiş ürüne favorileme anlamsız)
-    const product = await prisma.product.findUnique({
+    const product = await prisma.product.findFirst({
       where: { id: productId, deletedAt: null },
       select: { id: true },
     });
