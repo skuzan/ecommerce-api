@@ -1,0 +1,3 @@
+-- No-op migration.
+-- The previous version tried to DROP DEFAULT on "searchVector",
+-- but this column is GENERATED ALWAYS AS (...) STORED in PostgreSQL.

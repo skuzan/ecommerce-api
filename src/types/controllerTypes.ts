@@ -38,3 +38,16 @@ export interface AuthController {
   resetPassword: RequestHandler;
   resendVerification: RequestHandler;
 }
+
+export interface ReviewController {
+  list: RequestHandler;
+  stats: RequestHandler;
+  upsert: RequestHandler;
+  remove: RequestHandler;
+}
+
+export interface WishlistController {
+  list: RequestHandler;
+  add: RequestHandler;
+  remove: RequestHandler;
+}
