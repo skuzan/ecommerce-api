@@ -51,3 +51,19 @@ export interface WishlistController {
   add: RequestHandler;
   remove: RequestHandler;
 }
+
+export interface AddressController extends CrudController {
+  setDefault: RequestHandler;
+}
+
+export interface CartController {
+  get: RequestHandler;
+  addItem: RequestHandler;
+  updateItem: RequestHandler;
+  removeItem: RequestHandler;
+  clear: RequestHandler;
+  applyCoupon: RequestHandler;
+  removeCoupon: RequestHandler;
+}
+
+export interface CouponController extends CrudController {}

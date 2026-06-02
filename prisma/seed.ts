@@ -217,6 +217,50 @@ async function main() {
     roman: { name: roman.name, owner: producerB.email },
   });
 
+  // ====================================================================
+  // KUPONLAR — Gün 47 cartService.applyCoupon testleri için hazır veri
+  // ====================================================================
+  const welcome10 = await prisma.coupon.upsert({
+    where: { code: "WELCOME10" },
+    update: {},
+    create: {
+      code: "WELCOME10",
+      discountType: "PERCENTAGE",
+      discountValue: 10,
+      minOrderAmount: 0,
+    },
+  });
+
+  const bayram25 = await prisma.coupon.upsert({
+    where: { code: "BAYRAM25" },
+    update: {},
+    create: {
+      code: "BAYRAM25",
+      discountType: "PERCENTAGE",
+      discountValue: 25,
+      minOrderAmount: 10000, // 100 TL
+      maxUsage: 1000,
+      expiresAt: new Date("2027-06-01"),
+    },
+  });
+
+  const firstOrder = await prisma.coupon.upsert({
+    where: { code: "FIRSTORDER" },
+    update: {},
+    create: {
+      code: "FIRSTORDER",
+      discountType: "FIXED",
+      discountValue: 2000, // 20 TL
+      minOrderAmount: 0,
+    },
+  });
+
+  console.log("Kuponlar oluşturuldu:", {
+    welcome10: welcome10.code,
+    bayram25: bayram25.code,
+    firstOrder: firstOrder.code,
+  });
+
   console.log("\n✅ Seed işlemi tamamlandı!");
   console.log(`Tüm test kullanıcılarının şifresi: ${SEED_PASSWORD}\n`);
 }

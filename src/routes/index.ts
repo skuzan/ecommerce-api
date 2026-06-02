@@ -6,6 +6,9 @@ import tagsRoutes from "./tagRoutes.js";
 import authRoutes from "./authRoutes.js";
 import reviewRoutes from "./reviewRoutes.js";
 import wishlistRoutes from "./wishlistRoutes.js";
+import addressRoutes from "./addressRoutes.js";
+import cartRoutes from "./cartRoutes.js";
+import couponRoutes from "./couponRoutes.js";
 
 const router: ExpressRouter = Router();
 
@@ -23,5 +26,10 @@ router.use("/reviews", reviewRoutes);
 
 router.use("/wishlists", wishlistRoutes);
 
+router.use("/addresses", addressRoutes);
+
+router.use("/cart", cartRoutes);
+
+router.use("/coupons", couponRoutes);
 
 export default router;
