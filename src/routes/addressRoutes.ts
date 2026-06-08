@@ -10,28 +10,43 @@ import {
 
 const router: ExpressRouter = Router();
 
-router.use(authenticate);
+// Tüm adres endpoint'leri authenticated — adresler kullanıcıya özel kaynak.
+router.get("/", authenticate, addressController.list);
 
-router.get("/", addressController.getAll);
-router.get("/deleted", addressController.getDeleted);
-router.post("/", validateBody(createAddressSchema), addressController.create);
-router.get("/:id", validateParams(idParamSchema), addressController.getById);
+router.get(
+  "/:id",
+  authenticate,
+  validateParams(idParamSchema),
+  addressController.getById,
+);
+
+router.post(
+  "/",
+  authenticate,
+  validateBody(createAddressSchema),
+  addressController.create,
+);
+
 router.put(
   "/:id",
+  authenticate,
   validateParams(idParamSchema),
   validateBody(updateAddressSchema),
   addressController.update,
 );
-router.delete("/:id", validateParams(idParamSchema), addressController.remove);
+
 router.patch(
-  "/:id/restore",
-  validateParams(idParamSchema),
-  addressController.restore,
-);
-router.patch(
-  "/:id/default",
+  "/:id/set-default",
+  authenticate,
   validateParams(idParamSchema),
   addressController.setDefault,
+);
+
+router.delete(
+  "/:id",
+  authenticate,
+  validateParams(idParamSchema),
+  addressController.remove,
 );
 
 export default router;

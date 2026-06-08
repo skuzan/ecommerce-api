@@ -7,27 +7,45 @@ import { idParamSchema } from "../schemas/commonSchemas.js";
 import {
   createCouponSchema,
   updateCouponSchema,
+  validateCouponSchema,
 } from "../schemas/couponSchemas.js";
 
 const router: ExpressRouter = Router();
 
-router.use(authenticate, authorize("ADMIN"));
+// Tüm giriş yapmış kullanıcılar: "bu kupon sepetime uyar mı" ön kontrolü.
+router.post(
+  "/validate",
+  authenticate,
+  validateBody(validateCouponSchema),
+  couponController.validate,
+);
 
-router.get("/", couponController.getAll);
-router.get("/deleted", couponController.getDeleted);
-router.post("/", validateBody(createCouponSchema), couponController.create);
-router.get("/:id", validateParams(idParamSchema), couponController.getById);
+// ADMIN — kupon yönetimi (list / create / update / delete)
+router.get("/", authenticate, authorize("ADMIN"), couponController.list);
+
+router.post(
+  "/",
+  authenticate,
+  authorize("ADMIN"),
+  validateBody(createCouponSchema),
+  couponController.create,
+);
+
 router.put(
   "/:id",
+  authenticate,
+  authorize("ADMIN"),
   validateParams(idParamSchema),
   validateBody(updateCouponSchema),
   couponController.update,
 );
-router.delete("/:id", validateParams(idParamSchema), couponController.remove);
-router.patch(
-  "/:id/restore",
+
+router.delete(
+  "/:id",
+  authenticate,
+  authorize("ADMIN"),
   validateParams(idParamSchema),
-  couponController.restore,
+  couponController.remove,
 );
 
 export default router;

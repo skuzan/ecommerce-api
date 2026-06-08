@@ -1,8 +1,13 @@
-import type { Request, Response } from "express";
+import { type Request, type Response } from "express";
 import { cartService } from "../services/cartService.js";
-import type { CartController } from "../types/controllerTypes.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { sendNoContent, sendSuccess } from "../utils/response.js";
+import { sendSuccess } from "../utils/response.js";
+import type { CartController } from "../types/controllerTypes.js";
+import type {
+  AddItemInput,
+  ApplyCouponInput,
+  UpdateItemInput,
+} from "../schemas/cartSchemas.js";
 
 const get = asyncHandler(async (req: Request, res: Response) => {
   const cart = await cartService.get(req.user!.userId);
@@ -10,35 +15,33 @@ const get = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const addItem = asyncHandler(async (req: Request, res: Response) => {
-  const cart = await cartService.addItem(req.user!.userId, req.body);
-  sendSuccess(res, cart, 201);
+  const { productId, quantity } = req.body as AddItemInput;
+  const cart = await cartService.addItem(req.user!.userId, productId, quantity);
+  sendSuccess(res, cart);
 });
 
 const updateItem = asyncHandler(
-  async (req: Request<{ itemId: string }>, res: Response) => {
+  async (req: Request<{ id: string }>, res: Response) => {
+    const { quantity } = req.body as UpdateItemInput;
     const cart = await cartService.updateItem(
       req.user!.userId,
-      req.params.itemId,
-      req.body,
+      req.params.id,
+      quantity,
     );
     sendSuccess(res, cart);
   },
 );
 
 const removeItem = asyncHandler(
-  async (req: Request<{ itemId: string }>, res: Response) => {
-    await cartService.removeItem(req.user!.userId, req.params.itemId);
-    sendNoContent(res);
+  async (req: Request<{ id: string }>, res: Response) => {
+    const cart = await cartService.removeItem(req.user!.userId, req.params.id);
+    sendSuccess(res, cart);
   },
 );
 
-const clear = asyncHandler(async (req: Request, res: Response) => {
-  await cartService.clear(req.user!.userId);
-  sendNoContent(res);
-});
-
 const applyCoupon = asyncHandler(async (req: Request, res: Response) => {
-  const cart = await cartService.applyCoupon(req.user!.userId, req.body);
+  const { code } = req.body as ApplyCouponInput;
+  const cart = await cartService.applyCoupon(req.user!.userId, code);
   sendSuccess(res, cart);
 });
 
@@ -52,7 +55,6 @@ export const cartController: CartController = {
   addItem,
   updateItem,
   removeItem,
-  clear,
   applyCoupon,
   removeCoupon,
 };

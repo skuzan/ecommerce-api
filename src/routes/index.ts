@@ -9,6 +9,7 @@ import wishlistRoutes from "./wishlistRoutes.js";
 import addressRoutes from "./addressRoutes.js";
 import cartRoutes from "./cartRoutes.js";
 import couponRoutes from "./couponRoutes.js";
+import orderRoutes from "./orderRoutes.js";
 
 const router: ExpressRouter = Router();
 
@@ -31,5 +32,7 @@ router.use("/addresses", addressRoutes);
 router.use("/cart", cartRoutes);
 
 router.use("/coupons", couponRoutes);
+
+router.use("/orders", orderRoutes);
 
 export default router;

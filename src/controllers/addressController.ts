@@ -1,37 +1,48 @@
-import type { Request, Response } from "express";
+import { type Request, type Response } from "express";
 import { addressService } from "../services/addressService.js";
-import type { AddressController } from "../types/controllerTypes.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { sendList, sendNoContent, sendSuccess } from "../utils/response.js";
+import {
+  sendList,
+  sendNoContent,
+  sendSuccess,
+} from "../utils/response.js";
+import type { AddressController } from "../types/controllerTypes.js";
 
-const getAll = asyncHandler(async (req: Request, res: Response) => {
-  const addresses = await addressService.findAll(req.user!.userId);
-  sendList(res, addresses);
+const list = asyncHandler(async (req: Request, res: Response) => {
+  const items = await addressService.list(req.user!.userId);
+  sendList(res, items);
 });
 
 const getById = asyncHandler(
   async (req: Request<{ id: string }>, res: Response) => {
-    const address = await addressService.findById(
-      req.user!.userId,
-      req.params.id,
-    );
-    sendSuccess(res, address);
+    const item = await addressService.findById(req.user!.userId, req.params.id);
+    sendSuccess(res, item);
   },
 );
 
 const create = asyncHandler(async (req: Request, res: Response) => {
-  const address = await addressService.create(req.user!.userId, req.body);
-  sendSuccess(res, address, 201);
+  const item = await addressService.create(req.user!.userId, req.body);
+  sendSuccess(res, item, 201);
 });
 
 const update = asyncHandler(
   async (req: Request<{ id: string }>, res: Response) => {
-    const address = await addressService.update(
+    const item = await addressService.update(
       req.user!.userId,
       req.params.id,
       req.body,
     );
-    sendSuccess(res, address);
+    sendSuccess(res, item);
+  },
+);
+
+const setDefault = asyncHandler(
+  async (req: Request<{ id: string }>, res: Response) => {
+    const item = await addressService.setDefault(
+      req.user!.userId,
+      req.params.id,
+    );
+    sendSuccess(res, item);
   },
 );
 
@@ -42,35 +53,11 @@ const remove = asyncHandler(
   },
 );
 
-const restore = asyncHandler(
-  async (req: Request<{ id: string }>, res: Response) => {
-    const address = await addressService.restore(req.user!.userId, req.params.id);
-    sendSuccess(res, address);
-  },
-);
-
-const getDeleted = asyncHandler(async (req: Request, res: Response) => {
-  const addresses = await addressService.findDeleted(req.user!.userId);
-  sendList(res, addresses);
-});
-
-const setDefault = asyncHandler(
-  async (req: Request<{ id: string }>, res: Response) => {
-    const address = await addressService.setDefault(
-      req.user!.userId,
-      req.params.id,
-    );
-    sendSuccess(res, address);
-  },
-);
-
 export const addressController: AddressController = {
-  getAll,
+  list,
   getById,
   create,
   update,
-  remove,
-  restore,
-  getDeleted,
   setDefault,
+  remove,
 };

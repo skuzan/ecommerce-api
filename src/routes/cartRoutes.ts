@@ -2,36 +2,48 @@ import { Router, type Router as ExpressRouter } from "express";
 import { cartController } from "../controllers/cartController.js";
 import { authenticate } from "../middlewares/authenticate.js";
 import { validateBody, validateParams } from "../middlewares/validate.js";
+import { idParamSchema } from "../schemas/commonSchemas.js";
 import {
-  addCartItemSchema,
+  addItemSchema,
   applyCouponSchema,
-  cartItemIdParamSchema,
-  updateCartItemSchema,
+  updateItemSchema,
 } from "../schemas/cartSchemas.js";
 
 const router: ExpressRouter = Router();
 
-router.use(authenticate);
+// Tüm sepet endpoint'leri authenticated — sepet kullanıcıya özel kaynak.
 
-router.get("/", cartController.get);
-router.delete("/", cartController.clear);
-router.post("/items", validateBody(addCartItemSchema), cartController.addItem);
+router.get("/", authenticate, cartController.get);
+
+router.post(
+  "/items",
+  authenticate,
+  validateBody(addItemSchema),
+  cartController.addItem,
+);
+
 router.put(
-  "/items/:itemId",
-  validateParams(cartItemIdParamSchema),
-  validateBody(updateCartItemSchema),
+  "/items/:id",
+  authenticate,
+  validateParams(idParamSchema),
+  validateBody(updateItemSchema),
   cartController.updateItem,
 );
+
 router.delete(
-  "/items/:itemId",
-  validateParams(cartItemIdParamSchema),
+  "/items/:id",
+  authenticate,
+  validateParams(idParamSchema),
   cartController.removeItem,
 );
+
 router.post(
-  "/coupon",
+  "/apply-coupon",
+  authenticate,
   validateBody(applyCouponSchema),
   cartController.applyCoupon,
 );
-router.delete("/coupon", cartController.removeCoupon);
+
+router.delete("/coupon", authenticate, cartController.removeCoupon);
 
 export default router;

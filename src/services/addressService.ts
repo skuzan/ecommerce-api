@@ -1,9 +1,10 @@
 import { prisma } from "../config/database.js";
+import { Prisma } from "../generated/prisma/client.js";
+import { ConflictError, NotFoundError } from "../utils/errors.js";
 import type {
   CreateAddressInput,
   UpdateAddressInput,
 } from "../schemas/addressSchemas.js";
-import { ConflictError, NotFoundError } from "../utils/errors.js";
 
 const addressSelect = {
   id: true,
@@ -16,14 +17,14 @@ const addressSelect = {
   isDefault: true,
   createdAt: true,
   updatedAt: true,
-} as const;
+} satisfies Prisma.AddressSelect;
 
 export const addressService = {
-  findAll: async (userId: string) => {
+  list: async (userId: string) => {
     return prisma.address.findMany({
       where: { userId, deletedAt: null },
-      select: addressSelect,
       orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
+      select: addressSelect,
     });
   },
 
@@ -37,63 +38,108 @@ export const addressService = {
   },
 
   create: async (userId: string, input: CreateAddressInput) => {
-    return prisma.$transaction(async (tx) => {
-      const addressCount = await tx.address.count({
-        where: { userId, deletedAt: null },
-      });
-      const isDefault = input.isDefault || addressCount === 0;
-
-      if (isDefault) {
-        await tx.address.updateMany({
-          where: { userId, deletedAt: null, isDefault: true },
-          data: { isDefault: false },
+    try {
+      return await prisma.$transaction(async (tx) => {
+        // Bu user'ın hiç adresi yoksa otomatik default
+        const count = await tx.address.count({
+          where: { userId, deletedAt: null },
         });
-      }
+        const shouldBeDefault = input.isDefault === true || count === 0;
 
-      return tx.address.create({
-        data: {
-          userId,
-          title: input.title,
-          fullName: input.fullName,
-          phone: input.phone,
-          city: input.city,
-          district: input.district,
-          fullAddress: input.fullAddress,
-          isDefault,
-        },
-        select: addressSelect,
+        if (shouldBeDefault) {
+          await tx.address.updateMany({
+            where: { userId, isDefault: true, deletedAt: null },
+            data: { isDefault: false },
+          });
+        }
+
+        return tx.address.create({
+          data: {
+            userId,
+            title: input.title,
+            fullName: input.fullName,
+            phone: input.phone,
+            city: input.city,
+            district: input.district,
+            fullAddress: input.fullAddress,
+            isDefault: shouldBeDefault,
+          },
+          select: addressSelect,
+        });
       });
-    });
+    } catch (err) {
+      // Partial unique index race condition — defense in depth
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002"
+      ) {
+        throw new ConflictError("Aynı anda başka bir varsayılan adres ayarlandı");
+      }
+      throw err;
+    }
   },
 
   update: async (userId: string, id: string, input: UpdateAddressInput) => {
     const existing = await prisma.address.findFirst({
       where: { id, userId, deletedAt: null },
-      select: { id: true },
+      select: { id: true, isDefault: true },
     });
     if (!existing) throw new NotFoundError("Adres");
 
-    return prisma.$transaction(async (tx) => {
-      if (input.isDefault) {
-        await tx.address.updateMany({
-          where: { userId, deletedAt: null, isDefault: true, id: { not: id } },
-          data: { isDefault: false },
-        });
-      }
+    const willBecomeDefault =
+      input.isDefault === true && !existing.isDefault;
 
+    // exactOptionalPropertyTypes: yalnızca tanımlı alanları data'ya yaz.
+    const data: Prisma.AddressUpdateInput = {};
+    if (input.title !== undefined) data.title = input.title;
+    if (input.fullName !== undefined) data.fullName = input.fullName;
+    if (input.phone !== undefined) data.phone = input.phone;
+    if (input.city !== undefined) data.city = input.city;
+    if (input.district !== undefined) data.district = input.district;
+    if (input.fullAddress !== undefined) data.fullAddress = input.fullAddress;
+    if (input.isDefault !== undefined) data.isDefault = input.isDefault;
+
+    try {
+      return await prisma.$transaction(async (tx) => {
+        if (willBecomeDefault) {
+          await tx.address.updateMany({
+            where: { userId, isDefault: true, deletedAt: null },
+            data: { isDefault: false },
+          });
+        }
+
+        return tx.address.update({
+          where: { id },
+          data,
+          select: addressSelect,
+        });
+      });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002"
+      ) {
+        throw new ConflictError("Aynı anda başka bir varsayılan adres ayarlandı");
+      }
+      throw err;
+    }
+  },
+
+  setDefault: async (userId: string, id: string) => {
+    const address = await prisma.address.findFirst({
+      where: { id, userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!address) throw new NotFoundError("Adres");
+
+    return prisma.$transaction(async (tx) => {
+      await tx.address.updateMany({
+        where: { userId, isDefault: true, deletedAt: null },
+        data: { isDefault: false },
+      });
       return tx.address.update({
         where: { id },
-        data: {
-          ...(input.title !== undefined && { title: input.title }),
-          ...(input.fullName !== undefined && { fullName: input.fullName }),
-          ...(input.phone !== undefined && { phone: input.phone }),
-          ...(input.city !== undefined && { city: input.city }),
-          ...(input.district !== undefined && { district: input.district }),
-          ...(input.fullAddress !== undefined && {
-            fullAddress: input.fullAddress,
-          }),
-          ...(input.isDefault !== undefined && { isDefault: input.isDefault }),
-        },
+        data: { isDefault: true },
         select: addressSelect,
       });
     });
@@ -106,53 +152,12 @@ export const addressService = {
     });
     if (!address) throw new NotFoundError("Adres");
 
+    // Soft delete — Order tablosu Gün 48'de FK olarak referans verecek.
+    // Default adres silindiyse, kalan adreslerden birini otomatik default yapmıyoruz;
+    // user dilerse setDefault çağırır. Bu kasıtlı sade davranış.
     await prisma.address.update({
       where: { id },
       data: { deletedAt: new Date(), isDefault: false },
-    });
-  },
-
-  setDefault: async (userId: string, id: string) => {
-    const address = await prisma.address.findFirst({
-      where: { id, userId, deletedAt: null },
-      select: { id: true },
-    });
-    if (!address) throw new NotFoundError("Adres");
-
-    return prisma.$transaction(async (tx) => {
-      await tx.address.updateMany({
-        where: { userId, deletedAt: null, isDefault: true },
-        data: { isDefault: false },
-      });
-
-      return tx.address.update({
-        where: { id },
-        data: { isDefault: true },
-        select: addressSelect,
-      });
-    });
-  },
-
-  restore: async (userId: string, id: string) => {
-    const address = await prisma.address.findFirst({
-      where: { id, userId },
-      select: { id: true, deletedAt: true },
-    });
-    if (!address) throw new NotFoundError("Adres");
-    if (!address.deletedAt) throw new ConflictError("Bu adres zaten aktif");
-
-    return prisma.address.update({
-      where: { id },
-      data: { deletedAt: null },
-      select: addressSelect,
-    });
-  },
-
-  findDeleted: async (userId: string) => {
-    return prisma.address.findMany({
-      where: { userId, deletedAt: { not: null } },
-      select: addressSelect,
-      orderBy: { deletedAt: "desc" },
     });
   },
 };

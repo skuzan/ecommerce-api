@@ -26,6 +26,13 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
 enum DiscountType {
   PERCENTAGE
   FIXED
@@ -64,6 +71,8 @@ model Product{
    images    ProductImage[]
 
   cartItems CartItem[]
+
+  orderItems OrderItem[]
 
   @@map("products")
 
@@ -142,6 +151,8 @@ model User {
   addresses Address[]
 
   cart Cart?
+
+  orders Order[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -230,6 +241,8 @@ model Address {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  orders Order[]
+
   @@index([userId])
   @@map("addresses")
 }
@@ -283,5 +296,62 @@ model Coupon {
 
   carts Cart[]
 
+  orders Order[]
+
   @@map("coupons")
 }
+
+model Order {
+  id String @id @default(uuid())
+  userId String
+  addressId String
+  couponId String?
+
+  subtotal Int
+  discountAmount Int @default(0)
+  totalAmount Int
+
+  status OrderStatus @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+
+  idempotencyKey String @unique
+
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+  address Address @relation(fields: [addressId], references: [id])
+  coupon Coupon? @relation(fields: [couponId], references: [id])
+  items OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id String @id @default(uuid())
+  orderId String
+  productId String
+  quantity Int
+  price Int
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+//! Sipariş adımları
+
+// 1-idempotencyKey, kullanıcı bu anahtarla daha önce sipariş vermiş mi?
+// 2-Kullanıcının sepetindeki ürünleri alıyoruz. (ürünler + kupon)
+// 3-sepette ürün var mı?
+// 4-verilen adres kullanıcıya ait mi?
+// 5-tutarları hesaplıyoruz (ara toplam, indirim, genel toplam)
+// 6-stok yeterli mi?
+// 7-transaction başlatıyoruz
+//   7.1-Order + orderItem kaydını oluşturuyoruz (status: PENDING
+//   7.2-stok güncelliyoruz (yeni stok = eski stok - sipariş miktarı)
+//   7.3-kupon kullanıldıysa kullanım sayısını artırıyoruz
+//   7.4-sepeti temizliyoruz
+// 8-siparişe geri dönüyoruz
