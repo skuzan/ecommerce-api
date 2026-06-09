@@ -10,6 +10,7 @@ import addressRoutes from "./addressRoutes.js";
 import cartRoutes from "./cartRoutes.js";
 import couponRoutes from "./couponRoutes.js";
 import orderRoutes from "./orderRoutes.js";
+import webhookRoutes from "./webhookRoutes.js";
 
 const router: ExpressRouter = Router();
 
@@ -34,5 +35,7 @@ router.use("/cart", cartRoutes);
 router.use("/coupons", couponRoutes);
 
 router.use("/orders", orderRoutes);
+
+router.use("/webhooks", webhookRoutes)
 
 export default router;

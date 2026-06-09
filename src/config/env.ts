@@ -29,6 +29,9 @@ const envSchema = z.object({
     .string()
     .default("image/jpeg,image/png,image/webp")
     .transform((s) => s.split(",").map((t) => t.trim())),
+
+  PAYMENT_WEBHOOK_SECRET: z.string().min(16),
+  SHIPPING_WEBHOOK_SECRET: z.string().min(16),
 });
 
 

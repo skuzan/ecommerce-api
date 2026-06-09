@@ -83,3 +83,8 @@ export interface OrderController {
   list: RequestHandler;
   getById: RequestHandler;
 }
+
+export interface WebhookController {
+  payment: RequestHandler;
+  // shipping: RequestHandler;
+}
