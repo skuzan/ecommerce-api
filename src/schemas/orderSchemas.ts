@@ -5,3 +5,8 @@ export const createOrderSchema = z.object({
 });
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
+
+export const updateStatusSchema = z.object({
+  status: z.enum(["PROCESSING", "SHIPPED", "DELIVERED"]),
+});
+export type UpdateStatusInput = z.infer<typeof updateStatusSchema>;

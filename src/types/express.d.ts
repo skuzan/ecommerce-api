@@ -8,6 +8,7 @@ declare global {
                 role: Role
             }
             idempotencyKey?: string;
+            requestId?: string;
         }
     }
 }

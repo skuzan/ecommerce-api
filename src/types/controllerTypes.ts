@@ -82,9 +82,11 @@ export interface OrderController {
   create: RequestHandler;
   list: RequestHandler;
   getById: RequestHandler;
+  updateStatus: RequestHandler;
+  cancel: RequestHandler;
 }
 
 export interface WebhookController {
   payment: RequestHandler;
-  // shipping: RequestHandler;
+  shipping: RequestHandler;
 }

@@ -2,6 +2,8 @@ import type { NextFunction, Request, Response } from "express";
 import { AppError, ValidationError } from "../utils/errors.js";
 import { Prisma } from "../generated/prisma/client.js";
 import multer from "multer";
+import { maskSensitive } from "../utils/redact.js";
+import { logger } from "../config/logger.js";
 
 export const errorHandler = (
   err: Error,
@@ -10,21 +12,22 @@ export const errorHandler = (
   next: NextFunction,
 ) => {
   const errorLog = {
+    requestId: req.requestId,
     timestamp: new Date().toISOString(),
     method: req.method,
     url: req.originalUrl,
-    message: err.message,
+    errorMessage: err.message,
     stack: err.stack,
-    body: req.body,
+    body: maskSensitive(req.body),
     query: req.query,
     params: req.params,
     ip: req.ip,
   };
 
   if (err instanceof AppError && err.isOperational) {
-    console.warn(JSON.stringify(errorLog, null, 2));
+    logger.warn("İşlenen hata", errorLog);
   } else {
-    console.error(JSON.stringify(errorLog, null, 2));
+    logger.error("Beklenmeyen hata", errorLog);
   }
 
   if (err instanceof AppError) {

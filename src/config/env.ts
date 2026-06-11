@@ -15,7 +15,6 @@ const envSchema = z.object({
     .min(128, "JWT_REFRESH_SECRET en az 128 karakter olmalı"),
   JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
   JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
-
   SMTP_HOST: z.string().default("localhost"),
   SMTP_PORT: z.coerce.number().int().positive().default(1025),
   SMTP_USER: z.string().default(""),
@@ -24,7 +23,7 @@ const envSchema = z.object({
   // Verify/reset linklerinde kullanılır
   FRONTEND_URL: z.string().url().default("http://localhost:3000"),
 
-    UPLOAD_MAX_SIZE_MB: z.coerce.number().int().positive().default(5),
+  UPLOAD_MAX_SIZE_MB: z.coerce.number().int().positive().default(5),
   UPLOAD_ALLOWED_TYPES: z
     .string()
     .default("image/jpeg,image/png,image/webp")
@@ -32,9 +31,8 @@ const envSchema = z.object({
 
   PAYMENT_WEBHOOK_SECRET: z.string().min(16),
   SHIPPING_WEBHOOK_SECRET: z.string().min(16),
+  LOG_LEVEL: z.enum(["http", "info", "warn", "error", "debug"]).default("http"),
 });
-
-
 
 const sonuc = envSchema.safeParse(process.env);
 

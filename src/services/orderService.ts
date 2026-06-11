@@ -1,10 +1,11 @@
 import { prisma } from "../config/database.js";
-import { Prisma } from "../generated/prisma/client.js";
+import { OrderStatus, Prisma } from "../generated/prisma/client.js";
 import {
   NotFoundError,
   ValidationError,
 } from "../utils/errors.js";
 import { calculateDiscount } from "./cartService.js";
+import { assertTransition } from "../utils/orderStateMachine.js";
 
 interface CreateOrderInput {
   addressId: string;
@@ -231,4 +232,65 @@ export const orderService = {
     if (!order) throw new NotFoundError("Sipariş");
     return order;
   },
+
+  updateStatus: async (orderId: string, newStatus: OrderStatus) => {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId, deletedAt: null },
+      select: { id: true, status: true },
+    });
+    if (!order) throw new NotFoundError("Sipariş");
+
+    assertTransition(order.status, newStatus);
+
+    return prisma.order.update({
+      where: { id: orderId },
+      data: { status: newStatus },
+    });
+  },
+
+  cancel: async (orderId: string, userId: string) => {
+    const order = await prisma.order.findFirst({
+      where: { id: orderId, userId, deletedAt: null },
+      include: { items: true },
+    });
+    if (!order) throw new NotFoundError("Sipariş");
+
+    assertTransition(order.status, "CANCELLED");
+
+    return prisma.$transaction(async (tx) => {
+      const updated = await tx.order.update({
+        where: { id: orderId },
+        data: {
+          status: "CANCELLED",
+          ...(order.paymentStatus === "PAID" && { paymentStatus: "REFUNDED" }),
+        },
+      });
+
+      for (const item of order.items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: {
+              increment: item.quantity,
+            },
+          },
+        });
+      }
+
+      if (order.couponId) {
+        await tx.coupon.update({
+          where: { id: order.couponId },
+          data: {
+            usageCount: {
+              decrement: 1,
+            },
+          },
+        });
+      }
+
+      return updated;
+    });
+  },
 };
+
+
